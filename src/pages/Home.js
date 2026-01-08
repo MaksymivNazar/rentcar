@@ -1,97 +1,96 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import CarCard from '../components/CarCard';
-import { cars as initialCars } from '../data/cars';
+import { RentCarAPI } from '../api'; // Використовуємо наш єдиний інтерфейс
 import '../styles/Home.css';
 
 function Home() {
+  const navigate = useNavigate();
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
   const [allCars, setAllCars] = useState([]);
+  const [loading, setLoading] = useState(true);
   const token = localStorage.getItem('jwt_token');
 
-  // ФУНКЦІЯ СИНХРОНІЗАЦІЇ (ВИПРАВЛЕНО: додано перевірку броні)
-  const loadCars = () => {
-    const savedCars = JSON.parse(localStorage.getItem('persistent_cars')) || initialCars;
-    const userBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-
-    // Проходимо по кожній машині і додаємо їй дату закінчення броні, якщо вона є
-    const updatedData = savedCars.map(car => {
-      const booking = userBookings.find(b => String(b.carId) === String(car.id));
-      return booking ? { ...car, bookedUntil: booking.endDate } : { ...car, bookedUntil: null };
-    });
-
-    setAllCars(updatedData);
+  // --- 1. ЗАВАНТАЖЕННЯ ДАНИХ ЧЕРЕЗ API ---
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      // Просто викликаємо метод. Логіка "звідки взяти дані" тепер всередині api/index.js
+      const data = await RentCarAPI.cars.getAll();
+      setAllCars(data);
+    } catch (err) {
+      console.error("Помилка при завантаженні авто на головній:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
-    loadCars();
-    window.addEventListener('storage', loadCars);
-    return () => window.removeEventListener('storage', loadCars);
+    loadData();
   }, []);
 
+  // Фільтрація (тепер це просто обробка отриманих від API даних)
   const featuredCars = allCars.filter(car => car.featured);
   const newCars = allCars.filter(car => car.new);
 
   const handleBook = (car) => {
-    if (car.bookedUntil) {
+    // Перевірка зайнятості за датою (з бекенду прийде bookedUntil)
+    const isBusy = car.bookedUntil && new Date(car.bookedUntil) > new Date();
+    
+    if (isBusy) {
       alert('Це авто вже заброньоване!');
       return;
     }
     if (!token) {
       alert('Будь ласка, увійдіть або зареєструйтесь для бронювання');
+      navigate('/login');
       return;
     }
     setSelectedCar(car);
     setShowBookingModal(true);
   };
 
-  const handleBookingSubmit = (e) => {
+  // --- 2. БРОНЮВАННЯ ЧЕРЕЗ API ---
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const startDate = formData.get('startDate');
-    const endDate = formData.get('endDate');
-    const phone = formData.get('phone');
-
-    const booking = {
-      id: Date.now(),
+    
+    const bookingPayload = {
       carId: selectedCar.id,
-      carName: selectedCar.name,
-      carImage: selectedCar.image,
-      startDate: startDate,
-      endDate: endDate,
-      phone: phone,
-      price: selectedCar.price,
-      status: 'pending',
-      createdAt: new Date().toISOString()
+      startDate: formData.get('startDate'),
+      endDate: formData.get('endDate'),
+      phone: formData.get('phone')
     };
 
-    const existingBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-    localStorage.setItem('user_bookings', JSON.stringify([booking, ...existingBookings]));
-
-    alert('Бронювання успішно відправлено!');
-    setShowBookingModal(false);
-    setSelectedCar(null);
-    
-    // Оновлюємо стан сторінки відразу
-    loadCars();
+    try {
+      // Відправляємо запит на сервер через API
+      await RentCarAPI.rentals.create(bookingPayload);
+      alert('Бронювання успішно відправлено!');
+      setShowBookingModal(false);
+      setSelectedCar(null);
+      
+      // Оновлюємо дані, щоб статус авто змінився на "Зайнято"
+      loadData();
+    } catch (err) {
+      alert('Сталася помилка при бронюванні.');
+    }
   };
+
+  if (loading) return <div className="loading">Завантаження...</div>;
 
   return (
     <div className="home">
       <section className="hero">
         <div className="container">
-          <h2>НОВИНКИ СЕЗОНУ 2025</h2>
+          <h2>НОВИНКИ СЕЗОНУ 2026</h2>
           <div className="cars-grid">
             {newCars.map(car => {
-              const isBusy = !!car.bookedUntil;
+              const isBusy = car.bookedUntil && new Date(car.bookedUntil) > new Date();
               return (
-                <div key={car.id} style={{ position: 'relative', opacity: isBusy ? 0.6 : 1 }}>
+                <div key={car.id} className="car-wrapper" style={{ position: 'relative', opacity: isBusy ? 0.6 : 1 }}>
                   {isBusy && (
-                    <div style={{
-                      position: 'absolute', top: 10, right: 10, zIndex: 5,
-                      background: '#e74c3c', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px'
-                    }}>
+                    <div className="status-label">
                       Зайнято до {new Date(car.bookedUntil).toLocaleDateString()}
                     </div>
                   )}
@@ -108,17 +107,10 @@ function Home() {
           <h2>Популярні авто</h2>
           <div className="cars-grid">
             {featuredCars.map(car => {
-              const isBusy = !!car.bookedUntil;
+              const isBusy = car.bookedUntil && new Date(car.bookedUntil) > new Date();
               return (
-                <div key={car.id} style={{ position: 'relative', opacity: isBusy ? 0.6 : 1 }}>
-                  {isBusy && (
-                    <div style={{
-                      position: 'absolute', top: 10, right: 10, zIndex: 5,
-                      background: '#e74c3c', color: 'white', padding: '5px 10px', borderRadius: '5px', fontSize: '12px'
-                    }}>
-                      Зайнято
-                    </div>
-                  )}
+                <div key={car.id} className="car-wrapper" style={{ position: 'relative', opacity: isBusy ? 0.6 : 1 }}>
+                  {isBusy && <div className="status-label">Зайнято</div>}
                   <CarCard car={car} onBook={() => handleBook(car)} />
                 </div>
               );
@@ -135,7 +127,7 @@ function Home() {
             <Link to="/catalog?category=business" className="category-card"><h3>Бізнес клас</h3></Link>
             <Link to="/catalog?category=premium" className="category-card"><h3>Преміум клас</h3></Link>
             <Link to="/catalog?category=suv" className="category-card"><h3>Позашляховики</h3></Link>
-            <Link to="/catalog?category=minibus" className="category-card"><h3>Мікроавтобуси</h3></Link>
+            <Link to="/catalog?category=bus" className="category-card"><h3>Мікроавтобуси</h3></Link>
             <Link to="/catalog?category=armored" className="category-card"><h3>Броньовані авто</h3></Link>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { RentCarAPI } from '../api'; // Підключаємо наш API інтерфейс
 import '../styles/Auth.css';
 
 function Register() {
@@ -10,6 +11,7 @@ function Register() {
     password: '',
     confirmPassword: ''
   });
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -19,31 +21,38 @@ function Register() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Валідація на рівні фронтенду
     if (formData.password !== formData.confirmPassword) {
       alert('Паролі не співпадають!');
       return;
     }
 
-    // Симуляция регистрации - генерируем JWT токен
-    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    
-    // Сохраняем данные пользователя
-    const userData = {
-      name: formData.name,
-      email: formData.email,
-      phone: formData.phone
-    };
-    
-    localStorage.setItem('jwt_token', mockToken);
-    localStorage.setItem('user_data', JSON.stringify(userData));
-    localStorage.setItem('user_bookings', JSON.stringify([]));
-    
-    alert('Реєстрація успішна! JWT токен збережено.');
-    navigate('/');
-    window.location.reload();
+    setLoading(true);
+
+    try {
+      // --- ВИКЛИК API ДЛЯ РЕЄСТРАЦІЇ ---
+      // Відправляємо об'єкт без confirmPassword, бо серверу він не потрібен
+      const { confirmPassword, ...registerData } = formData;
+      
+      const response = await RentCarAPI.auth.register(registerData);
+      
+      alert('Реєстрація успішна!');
+      
+      // Перенаправлення на головну
+      navigate('/');
+      
+      // Оновлюємо сторінку для коректного відображення стану авторизації в хедері
+      window.location.reload();
+      
+    } catch (err) {
+      alert('Помилка реєстрації. Можливо, такий Email вже існує.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,6 +67,7 @@ function Register() {
               name="name"
               value={formData.name}
               onChange={handleChange}
+              disabled={loading}
               required
             />
           </div>
@@ -68,6 +78,7 @@ function Register() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              disabled={loading}
               required
             />
           </div>
@@ -78,6 +89,7 @@ function Register() {
               name="phone"
               value={formData.phone}
               onChange={handleChange}
+              disabled={loading}
               placeholder="+38 (0XX) XXX XX XX"
               required
             />
@@ -89,6 +101,7 @@ function Register() {
               name="password"
               value={formData.password}
               onChange={handleChange}
+              disabled={loading}
               required
             />
           </div>
@@ -99,10 +112,13 @@ function Register() {
               name="confirmPassword"
               value={formData.confirmPassword}
               onChange={handleChange}
+              disabled={loading}
               required
             />
           </div>
-          <button type="submit" className="auth-btn">Зареєструватись</button>
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? 'Створення акаунту...' : 'Зареєструватись'}
+          </button>
         </form>
         <p className="auth-link">
           Вже є акаунт? <Link to="/login">Увійти</Link>
@@ -113,4 +129,3 @@ function Register() {
 }
 
 export default Register;
-

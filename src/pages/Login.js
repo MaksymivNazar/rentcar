@@ -1,43 +1,43 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { RentCarAPI } from '../api'; // Наш API інтерфейс
 import '../styles/Auth.css';
 
 function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
-    // ПЕРЕВІРКА НА АДМІНА
-    const isAdmin = email === 'admin@olimp.com' && password === 'admin777';
-    
-    // Симуляция авторизации
-    const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
-    
-    // Створюємо дані користувача (зберігаємо твою логіку + роль)
-    const userData = {
-      name: isAdmin ? 'Адміністратор' : email.split('@')[0],
-      email: email,
-      phone: '',
-      role: isAdmin ? 'admin' : 'user'
-    };
-    
-    localStorage.setItem('user_data', JSON.stringify(userData));
+    try {
+      // --- 1. ВИКЛИК API ЗАМІСТЬ ПРЯМОГО LOCALSTORAGE ---
+      // Відправляємо дані на "сервер"
+      const response = await RentCarAPI.auth.login({ email, password });
+      
+      // Наше API всередині само збереже токен і дані юзера, 
+      // тому нам тут залишається тільки логіка перенаправлення
+      
+      alert(response.user.role === 'admin' ? 'Вхід виконано (Адмін)' : 'Успішний вхід!');
+      
+      // --- 2. РЕДИРЕКТ ЗАЛЕЖНО ВІД РОЛІ ---
+      if (response.user.role === 'admin') {
+        navigate('/admin-panel');
+      } else {
+        navigate('/profile');
+      }
 
-    if (!localStorage.getItem('user_bookings')) {
-      localStorage.setItem('user_bookings', JSON.stringify([]));
+      // Оновлюємо сторінку, щоб хедер побачив новий токен
+      window.location.reload();
+      
+    } catch (err) {
+      alert('Помилка входу: перевірте пошту або пароль');
+    } finally {
+      setLoading(false);
     }
-    
-    localStorage.setItem('jwt_token', mockToken);
-    
-    alert(isAdmin ? 'Вхід виконано (Адмін)' : 'Успішний вхід!');
-    
-    // Редирект залежно від ролі
-    isAdmin ? navigate('/admin-panel') : navigate('/');
-    
-    window.location.reload();
   };
 
   return (
@@ -47,13 +47,29 @@ function Login() {
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Email:</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)} 
+              disabled={loading}
+              placeholder="admin@olimp.com"
+              required 
+            />
           </div>
           <div className="form-group">
             <label>Пароль:</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)} 
+              disabled={loading}
+              placeholder="••••••••"
+              required 
+            />
           </div>
-          <button type="submit" className="auth-btn">Увійти</button>
+          <button type="submit" className="auth-btn" disabled={loading}>
+            {loading ? 'Вхід...' : 'Увійти'}
+          </button>
         </form>
         <p className="auth-link">
           Немає акаунту? <Link to="/register">Зареєструватись</Link>

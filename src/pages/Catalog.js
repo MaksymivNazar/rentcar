@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import CarCard from '../components/CarCard';
-import { cars as initialCars } from '../data/cars';
+import { RentCarAPI } from '../api'; // Наш пульт керування через крапку
 import '../styles/Catalog.css';
 
 const categories = {
@@ -17,6 +17,7 @@ const categories = {
 
 function Catalog() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const categoryFromUrl = searchParams.get('category') || 'all';
 
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl);
@@ -25,27 +26,33 @@ function Catalog() {
   const [filteredCars, setFilteredCars] = useState([]);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // СИНХРОНІЗАЦІЯ ДАНИХ ПРИ КОЖНОМУ ВХОДІ В КАТАЛОГ
+  // --- 1. ЗАВАНТАЖЕННЯ ДАНИХ ЧЕРЕЗ API ---
   useEffect(() => {
-    const syncCars = () => {
-      const savedAdminCars = JSON.parse(localStorage.getItem('persistent_cars')) || initialCars;
-      const userBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-
-      const updatedData = savedAdminCars.map(car => {
-        const booking = userBookings.find(b => String(b.carId) === String(car.id));
-        return booking ? { ...car, bookedUntil: booking.endDate } : { ...car, bookedUntil: null };
-      });
-      setAllCars(updatedData);
+    const loadCars = async () => {
+      try {
+        setLoading(true);
+        // Викликаємо через крапку. 
+        // Якщо бекенд не працює, спрацює наша заглушка в api/index.js
+        const data = await RentCarAPI.cars.getAll();
+        setAllCars(data);
+      } catch (err) {
+        console.error("Помилка завантаження каталогу:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    syncCars();
-  }, []); // Спрацьовує при монтуванні компонента
+    loadCars();
+  }, []);
 
+  // Синхронізація категорії з URL
   useEffect(() => {
     setSelectedCategory(searchParams.get('category') || 'all');
   }, [searchParams]);
 
+  // --- 2. ФІЛЬТРАЦІЯ (залишається на фронті для швидкості) ---
   useEffect(() => {
     let filtered = [...allCars];
     if (selectedCategory !== 'all') {
@@ -65,7 +72,8 @@ function Catalog() {
   };
 
   const openBookingModal = (car) => {
-    if (car.bookedUntil) {
+    const isBusy = car.bookedUntil && new Date(car.bookedUntil) > new Date();
+    if (isBusy) {
       alert("Це авто вже заброньоване!");
       return;
     }
@@ -73,39 +81,30 @@ function Catalog() {
     setShowBookingModal(true);
   };
 
-  const handleBookingSubmit = (e) => {
+  // --- 3. БРОНЮВАННЯ ЧЕРЕЗ API ---
+  const handleBookingSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const endDate = formData.get('endDate');
-    const startDate = formData.get('startDate');
-
-    const newBooking = {
-      id: Date.now(),
+    
+    const bookingData = {
       carId: selectedCar.id,
-      carName: selectedCar.name,
-      carImage: selectedCar.image,
-      startDate: startDate,
-      endDate: endDate,
-      status: 'Виконано', 
-      price: selectedCar.price,
-      createdAt: new Date().toISOString()
+      startDate: formData.get('startDate'),
+      endDate: formData.get('endDate')
     };
 
-    const userBookings = JSON.parse(localStorage.getItem('user_bookings') || '[]');
-    localStorage.setItem('user_bookings', JSON.stringify([newBooking, ...userBookings]));
-
-    // Оновлюємо стан локально
-    const updatedCars = allCars.map(car => 
-      String(car.id) === String(selectedCar.id) ? { ...car, bookedUntil: endDate } : car
-    );
-    
-    setAllCars(updatedCars);
-    localStorage.setItem('persistent_cars', JSON.stringify(updatedCars));
-
-    alert(`Бронювання підтверджено!`);
-    setShowBookingModal(false);
-    window.location.href = '/profile'; 
+    try {
+      // Відправляємо запит на сервер через API
+      await RentCarAPI.rentals.create(bookingData);
+      
+      alert(`Бронювання підтверджено!`);
+      setShowBookingModal(false);
+      navigate('/profile'); // Використовуємо navigate замість window.location
+    } catch (err) {
+      alert("Помилка бронювання. Перевірте з'єднання з сервером.");
+    }
   };
+
+  if (loading) return <div className="container"><h1>Завантаження каталогу...</h1></div>;
 
   return (
     <div className="catalog">
@@ -114,7 +113,7 @@ function Catalog() {
         <div className="search-bar">
           <input
             type="text"
-            placeholder="Пошук..."
+            placeholder="Пошук моделі..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="search-input"
@@ -136,7 +135,7 @@ function Catalog() {
 
         <div className="cars-grid">
           {filteredCars.map(car => {
-            const isBusy = !!car.bookedUntil;
+            const isBusy = car.bookedUntil && new Date(car.bookedUntil) > new Date();
             return (
               <div key={car.id} className="car-wrapper" style={{ position: 'relative', marginBottom: '30px' }}>
                 {isBusy && (
@@ -148,13 +147,14 @@ function Catalog() {
                     НЕДОСТУПНО ДО {new Date(car.bookedUntil).toLocaleDateString('uk-UA')}
                   </div>
                 )}
-                <div style={{ opacity: isBusy ? 0.5 : 1 }}>
+                <div style={{ opacity: isBusy ? 0.6 : 1 }}>
                   <CarCard car={car} onBook={() => openBookingModal(car)} />
                 </div>
               </div>
             );
           })}
         </div>
+        {filteredCars.length === 0 && <p>Автомобілів не знайдено.</p>}
       </div>
 
       {showBookingModal && (
@@ -167,7 +167,7 @@ function Catalog() {
               <label>Дата закінчення:</label>
               <input type="date" name="endDate" required style={{width:'100%', padding:'8px', margin:'10px 0'}} />
               <button type="submit" style={{width:'100%', padding:'10px', background:'#27ae60', color:'white', border:'none', borderRadius:'5px', marginTop:'10px', fontWeight:'bold'}}>ПІДТВЕРДИТИ</button>
-              <button type="button" onClick={() => setShowBookingModal(false)} style={{width:'100%', background:'none', border:'none', marginTop:'10px'}}>Закрити</button>
+              <button type="button" onClick={() => setShowBookingModal(false)} style={{width:'100%', background:'none', border:'none', marginTop:'10px', cursor:'pointer'}}>Закрити</button>
             </form>
           </div>
         </div>

@@ -19,19 +19,21 @@ import Profile from './pages/Profile';
 import AdminPanel from './admin/AdminPanel';
 import SupportChat from './components/SupportChat';
 
-// Захист адмінки
+// --- ЗАХИСТ АДМІНКИ ---
 const AdminRoute = ({ children }) => {
-  // ПЕРЕВІРЯЄМО ОБИДВА ВАРІАНТИ КЛЮЧІВ ДЛЯ НАДІЙНОСТІ
-  const user = JSON.parse(localStorage.getItem('user') || localStorage.getItem('user_data') || '{}');
+  // Використовуємо тільки той ключ, який прописали в RentCarAPI
+  const userStr = localStorage.getItem('user_data');
+  const user = userStr ? JSON.parse(userStr) : null;
   const token = localStorage.getItem('jwt_token');
 
-  console.log("Current User Role:", user.role); // Щоб ти бачив у консолі, хто ти
+  // Виводимо в консоль для діагностики при розробці
+  console.log("Admin Check - Role:", user?.role, "Auth:", !!token);
 
-  if (user.role === 'admin') {
+  if (token && user?.role === 'admin') {
     return children;
   } else {
-    console.warn("Access denied: Not an admin");
-    return <Navigate to="/login" />;
+    console.warn("Access denied: Redirecting to login");
+    return <Navigate to="/login" replace />;
   }
 };
 
@@ -43,17 +45,19 @@ function App() {
         
         <main style={{ minHeight: '80vh' }}>
           <Routes>
+            {/* Публічні маршрути */}
             <Route path="/" element={<Home />} />
             <Route path="/catalog" element={<Catalog />} /> 
             <Route path="/car/:id" element={<CarDetail />} />
             <Route path="/conditions" element={<Conditions />} /> 
             <Route path="/contacts" element={<Contacts />} />
             
+            {/* Авторизація */}
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/profile" element={<Profile />} />
             
-            {/* Шлях має збігатися з Link у Header */}
+            {/* Захищений маршрут адміна */}
             <Route 
               path="/admin-panel" 
               element={
@@ -63,8 +67,8 @@ function App() {
               } 
             />
 
-            {/* Редирект якщо ввели туфту в URL */}
-            <Route path="*" element={<Navigate to="/" />} />
+            {/* Редирект для неіснуючих сторінок (404) */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
         

@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import '../styles/Footer.css';
 
 function Footer() {
+  // Автоматичне отримання поточного року, щоб не міняти вручну
+  const currentYear = new Date().getFullYear();
+
   return (
     <footer className="footer">
       <div className="container">
@@ -29,14 +32,14 @@ function Footer() {
           </div>
           <div className="footer-section">
             <h3>Контакти</h3>
-            <p>+38 (093) 002 00 02</p>
+            <p><strong>+38 (093) 002 00 02</strong></p>
             <p>olimprentcar@gmail.com</p>
             <p>Україна, м. Київ<br />Столичне шосе, 103<br />ТРЦ Атмосфера</p>
           </div>
         </div>
         <div className="footer-bottom">
-          <p>2025 © Olimp Rent Car</p>
-          <p>developer: hard.code</p>
+          <p>{currentYear} © Olimp Rent Car</p>
+          <p style={{ opacity: 0.7, fontSize: '0.8rem' }}>developer: hard.code</p>
         </div>
       </div>
     </footer>
@@ -44,4 +47,3 @@ function Footer() {
 }
 
 export default Footer;
-
