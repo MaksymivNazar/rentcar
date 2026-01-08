@@ -1,0 +1,305 @@
+.car-detail {
+  padding: 40px 0;
+  min-height: 70vh;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  color: #007bff;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.back-link:hover {
+  color: #0056b3;
+}
+
+.car-detail-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 20px;
+}
+
+.car-detail-image {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.car-detail-image img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.availability-badge {
+  position: absolute;
+  top: 15px;
+  left: 15px;
+  padding: 8px 15px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 10;
+}
+
+.availability-badge.available {
+  background: #28a745;
+  color: #fff;
+}
+
+.car-detail-info {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.car-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #1a1a1a;
+}
+
+.car-price-section {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.car-price-section .original-price {
+  font-size: 20px;
+  color: #999;
+  text-decoration: line-through;
+}
+
+/* Знаходиш цей блок у своєму CSS */
+.car-price-section .current-price {
+    font-size: 28px;
+    font-weight: 700;
+    color: #27ae60; /* Змінив з #007bff (синій) на цей зелений */
+}
+
+.car-specs,
+.car-options,
+.car-description {
+  background: #f8f9fa;
+  padding: 25px;
+  border-radius: 8px;
+}
+
+.car-specs h2,
+.car-options h2,
+.car-description h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.spec-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.spec-label {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+}
+
+.spec-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.options-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.option-badge {
+  padding: 8px 15px;
+  background: #007bff;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.car-description p {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #666;
+}
+
+.car-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.book-btn,
+.track-btn {
+  flex: 1;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+
+.book-btn {
+  background: #007bff;
+  color: #fff;
+}
+
+.book-btn:hover {
+  background: #0056b3;
+}
+
+.track-btn {
+  background: #28a745;
+  color: #fff;
+}
+
+.track-btn:hover {
+  background: #218838;
+}
+
+.tracking-modal {
+  background: #fff;
+  border-radius: 12px;
+  padding: 30px;
+  max-width: 800px;
+  width: 100%;
+  position: relative;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.tracking-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tracking-info {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.tracking-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.tracking-label {
+  font-size: 12px;
+  color: #999;
+  text-transform: uppercase;
+}
+
+.tracking-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.tracking-value.status.moving {
+  color: #28a745;
+}
+
+.tracking-value.status.parked {
+  color: #ffc107;
+}
+
+.tracking-map-container {
+  height: 400px;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #e0e0e0;
+}
+
+.tracking-map-container .leaflet-container {
+  height: 100%;
+  width: 100%;
+  z-index: 1;
+}
+
+.custom-car-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-car-icon div {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.tracking-note {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+  text-align: center;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.car-detail-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+  font-size: 18px;
+  color: #999;
+}
+
+@media (max-width: 968px) {
+  .car-detail-content {
+    grid-template-columns: 1fr;
+  }
+
+  .specs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tracking-info {
+    grid-template-columns: 1fr;
+  }
+
+  .car-actions {
+    flex-direction: column;
+  }
+}
+
